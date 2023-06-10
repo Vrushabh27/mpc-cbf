@@ -2,9 +2,9 @@
 
 import numpy as np
 
-sim_time = 200                             # Total simulation time steps
+sim_time = 3                             # Total simulation time steps
 Ts = 0.1                                   # Sampling time [s]
-T_horizon = 20                             # Prediction horizon time steps
+T_horizon = 3                         # Prediction horizon time steps
 
 gamma = 0.1                                # CBF parameter in [0,1]
 safety_dist = 0.03                         # Safety distance
@@ -12,7 +12,7 @@ x0 = np.array([0, 0, 0])                   # Initial state
 
 # Actuator limits
 v_limit = 0.26                             # Linear velocity limit
-omega_limit = 1.8                          # Angular velocity limit
+omega_limit = 3.8                          # Angular velocity limit
 
 # Type of control
 controller = "MPC-CBF"                     # Options: "MPC-CBF", "MPC-DC"
@@ -21,7 +21,7 @@ trajectory = "infinity"                    # Type of trajectory. Options: circul
 
 # For setpoint control:
 goal = [2, 1, np.pi/2]                     # Robot's goal for set point control
-Q_sp = np.diag([15, 15, 0.005])            # State cost matrix
+Q_sp = np.diag([9, 9, 0.005]) #np.diag([15, 15, 0.005])            # State cost matrix
 R_sp = np.array([2, 0.5])                  # Controls cost matrix
 
 # For trajectory tracking control:
@@ -46,7 +46,7 @@ moving_obs = [(0.2, 0, 0, 0.6, 0.1),
 #        (0.0, -0.75, 0.02)]               # Define obstacles as list of tuples (x,y,radius)
 
 
-scenario = 1                               # Options: 1-6 or None
+scenario = 3                               # Options: 1-6 or None
 
 
 # ------------------------------------------------------------------------------

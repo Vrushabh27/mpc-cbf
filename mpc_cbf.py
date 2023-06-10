@@ -2,8 +2,8 @@ import do_mpc
 from casadi import *
 
 import config
-
-
+from numpy import linalg as LA
+from numpy.linalg import inv
 class MPC:
     """MPC-CBF Optimization problem:
 
@@ -335,3 +335,24 @@ class MPC:
             y_next = self.simulator.make_step(u0)
             # y_next = self.simulator.make_step(u0, w0=10**(-4)*np.random.randn(3, 1))  # Optional Additive process noise
             x0 = self.estimator.make_step(y_next)
+        return x0
+    def run_simulation_to_get_final_condition(self,xf,xf_minus,j,i):
+        """Runs a closed-loop control simulation."""
+        x1 = config.x0#self.x0
+        T=0.1
+        #Will add liveliness condition here
+        vec1=((xf_minus[j,0:2]-xf[j,0:2])-(xf_minus[i,0:2]-xf[i,0:2]))/T
+        vec2=xf[j,0:2]-xf[i,0:2]
+        l=abs(np.arccos(np.dot(vec1,vec2)/(LA.norm(vec1)*LA.norm(vec2))))
+        # print(vec1)
+        A=[[1, -2],[-2, 1]]
+        for k in range(self.sim_time):
+            u1 = self.mpc.make_step(x1)
+            # Calculate the stage cost for each timestep
+            # Below is the game theoretic control input chosen
+            # if l<0.2 and LA.norm(vec2)<0.2 and np.matmul(A,u1)<0:
+            #     u1=np.matmul(inv(A),u1)
+            y_next = self.simulator.make_step(u1)
+            # y_next = self.simulator.make_step(u0, w0=10**(-4)*np.random.randn(3, 1))  # Optional Additive process noise
+            x1 = self.estimator.make_step(y_next)
+        return x1

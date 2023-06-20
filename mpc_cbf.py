@@ -4,6 +4,7 @@ from casadi import *
 import config
 from numpy import linalg as LA
 from numpy.linalg import inv
+import casadi as ca
 class MPC:
     """MPC-CBF Optimization problem:
 
@@ -17,7 +18,7 @@ class MPC:
 
     where x'_k = x_{des_k} - x_k
     """
-    def __init__(self):
+    def __init__(self,xff,j,i,liveliness):
         self.sim_time = config.sim_time          # Total simulation time steps
         self.Ts = config.Ts                      # Sampling time
         self.T_horizon = config.T_horizon        # Prediction horizon
@@ -25,7 +26,8 @@ class MPC:
         self.v_limit = config.v_limit            # Linear velocity limit
         self.omega_limit = config.omega_limit    # Angular velocity limit
         self.R = config.R                        # Controls cost matrix
-        self.Q = config.Q                        # State cost matrix
+        self.Q = config.Q  
+        self.A=   np.array([[1, -2],[-2, 1]] )                  # State cost matrix
         self.static_obstacles_on = config.static_obstacles_on  # Whether to have static obstacles
         self.moving_obstacles_on = config.moving_obstacles_on  # Whether to have moving obstacles
         if self.static_obstacles_on:
@@ -41,7 +43,8 @@ class MPC:
         self.controller = config.controller      # Type of control
 
         self.model = self.define_model()
-        self.mpc = self.define_mpc()
+        # self.mpc = self.define_mpc()
+        self.mpc = self.define_mpc(xff,j,i,liveliness)
         self.simulator = self.define_simulator()
         self.estimator = do_mpc.estimator.StateFeedback(self.model)
         self.set_init_state()
@@ -135,7 +138,7 @@ class MPC:
         cost_expression = transpose(X)@self.Q@X
         return model, cost_expression
 
-    def define_mpc(self):
+    def define_mpc(self,xff,j,i,liveliness):
         """Configures the mpc controller.
 
         Returns:
@@ -177,9 +180,69 @@ class MPC:
             else:
                 # MPC-CBF: Add CBF constraints
                 mpc = self.add_cbf_constraints(mpc)
+                mpc = self.add_custom_constraint(mpc,xff,j,i,liveliness)
 
         mpc.setup()
         return mpc
+    
+    ##Liveness
+    def add_custom_constraint(self, mpc,xff,j,i,liveliness):
+        T=0.1
+        epsilon=0.001
+        l=3
+        xf_minus_one=xff[j,0:2]
+        xf_one=xff[j-2,0:2]
+        xf_minus_two=xff[j-1,0:2]
+        xf_two=xff[j-3,0:2]
+        vec1=((xf_minus_one-xf_one)-(xf_minus_two-xf_two))/T
+        constraint=0*self.model.u['u'][0]
+        u_0 = self.model.u['u'][0] 
+        u_1 = self.model.u['u'][1] 
+        if j>3 and i==0:
+            xf_minus_one=xff[j,0:2]
+            xf_one=xff[j-2,0:2]
+            xf_minus_two=xff[j-1,0:2]
+            xf_two=xff[j-3,0:2]
+        #Will add liveliness condition here
+            vec1=((xf_minus_one-xf_one)-(xf_minus_two-xf_two))/T#((xf_minus[j,0:2]-xf[j,0:2])-(xf_minus[i,0:2]-xf[i,0:2]))/T
+            vec2=(xf_minus_one-xf_minus_two)#xf[j,0:2]-xf[i,0:2]
+            l=abs(np.arcsin(np.cross(vec1,vec2)/(LA.norm(vec1)*LA.norm(vec2)+epsilon)))
+        # sigmoid function
+        # self.model.u['u'] = np.array(self.model.u['u'])
+#         u = self.model.u['u']
+
+# # Create new vector
+#         if isinstance(u, int):
+#             u = cs.MX.sym('u', 2)
+#             vec1=cs.MX(vec1)
+        # new_vec = cs.vertcat(vec1[0], u[1])
+        if j>3 and i==0 and l<1.1:
+            u_0 = self.model.u['u'][0]  # get the first component of u
+        # if j>3:
+            vec1_1 =vec1[1]  # get the first component of vec1
+        # else:
+        #     vec1_1=5.0
+            new_vector=vertcat(u_0, vec1_1)
+
+        # new_vector = vertcat(u_0, vec1_1)  # form a new vector
+            relu =ca.fmax(1.1 - l, 0)# 1 / (1 + cs.exp(-l + 0.2))
+            constraint = (self.A @ new_vector)
+            self.v_limit = self.v_limit/2
+            self.v_limit = self.v_limit/2
+        # constraint =  (self.A @ new_vector)
+        # constraint = relu * (self.A @ new_vec)
+
+    # set the constraint
+        # mpc.set_nl_cons('custom_sigmoid_constraint', constraint, ub=0)
+        # mpc.set_nl_cons('custom_sigmoid_constraint', constraint, ub=0)
+
+        return mpc
+
+
+
+
+
+
 
     def add_obstacle_constraints(self, mpc):
         """Adds the obstacle constraints to the mpc controller. (MPC-DC)
@@ -327,27 +390,48 @@ class MPC:
         self.estimator.x0 = self.x0
         self.mpc.set_initial_guess()
 
-    def run_simulation(self):
+    def run_simulation(self,xff,j):
         """Runs a closed-loop control simulation."""
         x0 = self.x0
+        epsilon=0.001
+        T=0.1
+        l=3
+        if j>3:
+            xf_minus_one=xff[j,0:2]
+            xf_one=xff[j-2,0:2]
+            xf_minus_two=xff[j-1,0:2]
+            xf_two=xff[j-3,0:2]
+        #Will add liveliness condition here
+            vec1=((xf_minus_one-xf_one)-(xf_minus_two-xf_two))/T#((xf_minus[j,0:2]-xf[j,0:2])-(xf_minus[i,0:2]-xf[i,0:2]))/T
+            vec2=(xf_minus_one-xf_minus_two)#xf[j,0:2]-xf[i,0:2]
+            l=abs(np.arcsin(np.cross(vec1,vec2)/(LA.norm(vec1)*LA.norm(vec2)+epsilon)))
         for k in range(self.sim_time):
             u0 = self.mpc.make_step(x0)
             y_next = self.simulator.make_step(u0)
             # y_next = self.simulator.make_step(u0, w0=10**(-4)*np.random.randn(3, 1))  # Optional Additive process noise
             x0 = self.estimator.make_step(y_next)
-        return x0
-    def run_simulation_to_get_final_condition(self,xf,xf_minus,j,i):
+        return l
+    def run_simulation_to_get_final_condition(self,xff,j,i,liveliness):
         """Runs a closed-loop control simulation."""
         x1 = config.x0#self.x0
         T=0.1
+        epsilon=0.001
+        if j>3:
+            xf_minus_one=xff[j,0:2]
+            xf_one=xff[j-2,0:2]
+            xf_minus_two=xff[j-1,0:2]
+            xf_two=xff[j-3,0:2]
         #Will add liveliness condition here
-        vec1=((xf_minus[j,0:2]-xf[j,0:2])-(xf_minus[i,0:2]-xf[i,0:2]))/T
-        vec2=xf[j,0:2]-xf[i,0:2]
-        l=abs(np.arccos(np.dot(vec1,vec2)/(LA.norm(vec1)*LA.norm(vec2))))
+            vec1=((xf_minus_one-xf_one)-(xf_minus_two-xf_two))/T#((xf_minus[j,0:2]-xf[j,0:2])-(xf_minus[i,0:2]-xf[i,0:2]))/T
+            vec2=(xf_minus_one-xf_minus_two)#xf[j,0:2]-xf[i,0:2]
+            l=abs(np.arcsin(np.cross(vec1,vec2)/(LA.norm(vec1)*LA.norm(vec2)+epsilon)))
         # print(vec1)
         A=[[1, -2],[-2, 1]]
         for k in range(self.sim_time):
             u1 = self.mpc.make_step(x1)
+            # if j>3 and l<1.1 and i==1 and liveliness=='on':
+            #     u=np.matmul(inv(A),u1)
+            #     u1[0]=u[0]/2
             # Calculate the stage cost for each timestep
             # Below is the game theoretic control input chosen
             # if l<0.2 and LA.norm(vec2)<0.2 and np.matmul(A,u1)<0:

@@ -191,14 +191,14 @@ class MPC:
         epsilon=0.001
         l=3
         xf_minus_one=xff[j,0:2]
-        xf_one=xff[j-2,0:2]
+        xf_one=xff[j-1,0:2]
         xf_minus_two=xff[j-1,0:2]
         xf_two=xff[j-3,0:2]
         vec1=((xf_minus_one-xf_one)-(xf_minus_two-xf_two))/T
         constraint=0*self.model.u['u'][0]
         u_0 = self.model.u['u'][0] 
         u_1 = self.model.u['u'][1] 
-        if j>3 and i==0:
+        if j<3 and i==0:
             xf_minus_one=xff[j,0:2]
             xf_one=xff[j-2,0:2]
             xf_minus_two=xff[j-1,0:2]
@@ -207,16 +207,8 @@ class MPC:
             vec1=((xf_minus_one-xf_one)-(xf_minus_two-xf_two))/T#((xf_minus[j,0:2]-xf[j,0:2])-(xf_minus[i,0:2]-xf[i,0:2]))/T
             vec2=(xf_minus_one-xf_minus_two)#xf[j,0:2]-xf[i,0:2]
             l=abs(np.arcsin(np.cross(vec1,vec2)/(LA.norm(vec1)*LA.norm(vec2)+epsilon)))
-        # sigmoid function
-        # self.model.u['u'] = np.array(self.model.u['u'])
-#         u = self.model.u['u']
 
-# # Create new vector
-#         if isinstance(u, int):
-#             u = cs.MX.sym('u', 2)
-#             vec1=cs.MX(vec1)
-        # new_vec = cs.vertcat(vec1[0], u[1])
-        if j>3 and i==0 and l<1.1:
+        if j>3 and i==1 and l<1.1:
             u_0 = self.model.u['u'][0]  # get the first component of u
         # if j>3:
             vec1_1 =vec1[1]  # get the first component of vec1
@@ -227,14 +219,17 @@ class MPC:
         # new_vector = vertcat(u_0, vec1_1)  # form a new vector
             relu =ca.fmax(1.1 - l, 0)# 1 / (1 + cs.exp(-l + 0.2))
             constraint = (self.A @ new_vector)
-            self.v_limit = self.v_limit/2
-            self.v_limit = self.v_limit/2
-        # constraint =  (self.A @ new_vector)
-        # constraint = relu * (self.A @ new_vec)
+            # self.v_limit = self.v_limit/2
+            # self.v_limit = self.v_limit/2
+        elif j>3 and i==0 and l<1.1:
+            u_0 = self.model.u['u'][1]  # get the first component of u
+            vec1_1 =vec1[0]  # get the first component of vec1
+            new_vector=vertcat(vec1_1, u_0)
+            relu =ca.fmax(1.1 - l, 0)# 1 / (1 + cs.exp(-l + 0.2))
+            constraint = (self.A @ new_vector)
 
     # set the constraint
-        # mpc.set_nl_cons('custom_sigmoid_constraint', constraint, ub=0)
-        # mpc.set_nl_cons('custom_sigmoid_constraint', constraint, ub=0)
+        mpc.set_nl_cons('custom_sigmoid_constraint', constraint, ub=0)
 
         return mpc
 

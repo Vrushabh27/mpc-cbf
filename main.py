@@ -217,9 +217,9 @@ def main():
             #     (ox, -0.9, 0.1),
             #     (ox, -1.0, 0.1)]
             if i==0:
-                config.v_limit=0.35
+                config.v_limit=0.3
             else:
-                config.v_limit=0.35
+                config.v_limit=0.3
             for k in range(n):
                 if i!=k:
                   config.obs.append((initial[k,0], initial[k,1],0.02)) # Ensures that other agents act as obstacles to agent i

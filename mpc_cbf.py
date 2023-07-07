@@ -180,7 +180,7 @@ class MPC:
             else:
                 # MPC-CBF: Add CBF constraints
                 mpc = self.add_cbf_constraints(mpc)
-                mpc = self.add_custom_constraint(mpc,xff,j,i,liveliness)
+                # mpc = self.add_custom_constraint(mpc,xff,j,i,liveliness)
 
         mpc.setup()
         return mpc
@@ -424,9 +424,9 @@ class MPC:
         A=[[1, -2],[-2, 1]]
         for k in range(self.sim_time):
             u1 = self.mpc.make_step(x1)
-            # if j>3 and l<1.1 and i==1 and liveliness=='on':
-            #     u=np.matmul(inv(A),u1)
-            #     u1[0]=u[0]/2
+            if j>3 and l<1.1 and i==1 and liveliness=='on':
+                u=np.matmul(inv(A),u1)
+                u1[0]=u1[0]/2
             # Calculate the stage cost for each timestep
             # Below is the game theoretic control input chosen
             # if l<0.2 and LA.norm(vec2)<0.2 and np.matmul(A,u1)<0:

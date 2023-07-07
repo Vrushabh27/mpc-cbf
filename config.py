@@ -21,8 +21,8 @@ trajectory = "infinity"                    # Type of trajectory. Options: circul
 
 # For setpoint control:
 goal = [2, 1, np.pi/2]                     # Robot's goal for set point control
-Q_sp = np.diag([11, 11, 0.005]) #np.diag([15, 15, 0.005])            # State cost matrix
-R_sp = np.array([2, 0.5])                  # Controls cost matrix
+Q_sp = np.diag([12, 12, 0.005]) #np.diag([15, 15, 0.005])            # State cost matrix
+R_sp = np.array([1, 0.5])                  # Controls cost matrix
 
 # For trajectory tracking control:
 Q_tr = np.diag([200, 200, 0.005])          # State cost matrix

@@ -20,7 +20,7 @@ import casadi as ca
 
 # Add number of agents
 n=2
-N=70 #Number of iteration steps for each agent
+N=50 #Number of iteration steps for each agent
 
 controller=[None]*n #Control input intitialization
 xf=np.zeros((n,3)) # initialization of final states
@@ -37,13 +37,13 @@ def main():
     R=config.R_sp
 
     #Scenarios: "doorway" or "intersection"
-    scenario="doorway"
+    scenario="intersection"
     #Add all initial and goal positions of the agents here (Format: [x, y, theta])
     if scenario=="doorway":
         initial=np.array([[-1, 0.5, 0],
                     [-1, -0.5, 0]])
-        goals=np.array([[1.5, -0.1, 0],
-                    [1.5, 0.1, 0]])
+        goals=np.array([[2, 0.1, 0],
+                    [2, -0.1, 0]])
     else:
         initial=np.array([[0.0, -2.0, 0],
                       [-2.0, 0.0, 0]])
@@ -65,10 +65,11 @@ def main():
             config.goal=goals[i,:]
             config.obs=[]
             if scenario=="doorway":
-                config.obs= [(ox, 0.3, 0.1),(ox, 0.4, 0.1),(ox, 0.5, 0.1),(ox, 0.6, 0.1),(ox, 0.7, 0.1),(ox, 0.8, 0.1),(ox, 0.9, 0.1),
-                  (ox, 1.0, 0.1),(ox, -0.3, 0.1), (ox, -0.3, 0.1),(ox, -0.4, 0.1),(ox, -0.5, 0.1),(ox, -0.6, 0.1),(ox, -0.7, 0.1),      
+                config.obs= [(ox, 0.4, 0.1),(ox, 0.5, 0.1),(ox, 0.6, 0.1),(ox, 0.7, 0.1),(ox, 0.8, 0.1),(ox, 0.9, 0.1),
+                  (ox, 1.0, 0.1),(ox, -0.3, 0.1), (ox, -0.3, 0.1),(ox, -0.3, 0.1),(ox, -0.4, 0.1),(ox, -0.5, 0.1),(ox, -0.6, 0.1),(ox, -0.7, 0.1),      
                 (ox, -0.8, 0.1),(ox, -0.9, 0.1)]
                 obstacles=config.obs
+                
 
             else:
                 config.obs= [(ox, 0.3, 0.1),(ox, 0.4, 0.1),(ox, 0.5, 0.1),(ox, 0.6, 0.1),(ox, 0.7, 0.1),(ox, 0.8, 0.1),(ox, 0.9, 0.1),
@@ -97,7 +98,7 @@ def main():
                 if i!=k:
                   config.obs.append((initial[k,0], initial[k,1],0.02)) 
 
-            #Liveliness "on" or "off" can be chosen from here
+            #Liveliness "on" or "off" can be selected from here
             liveliness='off'
 
             #Initialization of MPC controller for the ith agent
@@ -107,7 +108,8 @@ def main():
             #[1,:], [3,:], [5,:]... are final positions of agent 1
             #[2,:], [4,:], [6,:]... are final positions of agent 2
             final_positions_both_agents[c,:]=xf[i,:]
-
+            lll=controller[i].run_simulation(final_positions_both_agents,j)
+            LL.append(lll)
             #The position of agent i is propogated one time horizon ahead using the MPC controller
             xf[i,:]=controller[i].run_simulation_to_get_final_condition(final_positions_both_agents,j,i,liveliness).ravel()
 
@@ -186,7 +188,7 @@ def main():
         agent2.set_data(x2[frame, 0], x2[frame, 1])
 
         # Update the liveliness text based on the value of k
-        if frame<len(x1)-2 and abs(L[frame])< 0.0065:
+        if frame<len(x1)-2 and abs(L[frame])< 0.75:
             liveliness_text.set_text('Liveliness function = ON')
         else:
             liveliness_text.set_text('Liveliness function = OFF')

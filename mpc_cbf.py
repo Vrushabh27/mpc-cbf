@@ -426,7 +426,7 @@ class MPC:
             u1 = self.mpc.make_step(x1)
             if j>3 and l<1.1 and i==1 and liveliness=='on':
                 u=np.matmul(inv(A),u1)
-                u1[0]=u1[0]/2
+                u1[0]=u1[0]/10
             # Calculate the stage cost for each timestep
             # Below is the game theoretic control input chosen
             # if l<0.2 and LA.norm(vec2)<0.2 and np.matmul(A,u1)<0:
